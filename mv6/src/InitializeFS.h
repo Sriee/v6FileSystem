@@ -14,24 +14,25 @@
 #include <cmath>
 #include <cstring>
 #include "Constants.h"
+#include "MetaDirectory.h"
 
 using namespace std;
 
 
 class InitializeFS {
-	ofstream file;
+	fstream file;
 	string fsPath;
 	int numOfBlocks,numOfinodes;
 public:
-	bool checkParameters(int argc, char *argv[]);
-	void setFileSystemPath(string path);
+	bool checkParameters(string);
+	void setFileSystemPath(string);
 	string getFileSystemPath(void);
-	void setNumOfBlocks(int n1);
+	void setNumOfBlocks(int);
 	int getNumOfBlocks(void);
-	void setNumOfInodes(int n2);
+	void setNumOfInodes(int);
 	int getNumOfInodes(void);
 	int getSizeOfInode(void);
-	void createFileSystem(int argc, char *argv[]);
+	void createFileSystem(string);
 	int getInodesBlock(void);
 	int getFreeBlocks(void);
 	int getFreeBlocksIndex(void);

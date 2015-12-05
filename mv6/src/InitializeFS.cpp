@@ -6,24 +6,34 @@
  */
 
 #include "InitializeFS.h"
+#include "MetaDirectory.h"
 
 /**
  *Used to check whether the parameters entered for inifs command are valid
  *
- *@param argc Argument count
- *@param *argv[] Argument array from main function
+ *@param inp String input given in the terminal
  *@return true - If parameters are valid for initfs command
  *@return false - If parameters are invalid
  */
-bool InitializeFS :: checkParameters(int argc, char *argv[]){
+bool InitializeFS :: checkParameters(string inp){
 	bool valid=false;
-	if (argc < 5){
-		cout <<"!!Insufficient number of arguments!!" <<endl;
+	int inodes,blocks;
+	string path;
+	int space[2];
+	space[0] = inp.find(" ");
+	space[1] = inp.find(" ",space[0]+1);
+	space[2] = inp.find(" ",space[1]+1);
+	path = inp.substr(space[0]+1,space[1]-space[0]-1);
+	blocks = atoi(inp.substr(space[1]+1,space[2]-space[1]-1).c_str());
+	inodes = atoi(inp.substr(space[2]+1,inp.length()-1).c_str());
+
+	if ((blocks <= 0) | (inodes <=0) | (path.length()<=0) | (space[0]<=0) | (space[1]<=0) | (space[2]<=0) ){
+		cout <<"!!Invalid arguments!!" <<endl;
 		valid = false;
-	}else{
-		this->setFileSystemPath(argv[2]);
-		this->setNumOfBlocks(atoi(argv[3]));
-		this->setNumOfInodes(atoi(argv[4]));
+	}else {
+		this->setFileSystemPath(path);
+		this->setNumOfBlocks(blocks);
+		this->setNumOfInodes(inodes);
 		valid = true;
 	}
 	return valid;
@@ -32,19 +42,18 @@ bool InitializeFS :: checkParameters(int argc, char *argv[]){
 /**
  * Initialized the super block ,inode block and data blocks of the file system
  *
- *@param argc Argument count
- *@param *argv[] Argument array
+ *@param inp String input given in the terminal
  *@throws Exception when unkown block is reached, invalid block is traveresed
  *
  */
-void InitializeFS :: createFileSystem(int argc, char *argv[]){
-superBlock sb = {};
-iNode node = {},rootNode = {};
-Directory rootDirectory = {};
+void InitializeFS :: createFileSystem(string inp){
+superBlock sb;
+iNode node,rootNode;
+Directory rootDirectory,filler;
 unsigned short freeHeadChain;
 try{
-	 if(checkParameters(argc,argv)){
-	 file.open("fsaccess",ios::binary | ios::app);
+	if(checkParameters(inp)){
+	 file.open(getFileSystemPath().append("fsaccess").c_str(),ios::binary | ios::app);
 		if (file.is_open()){
 			//Initializing the file system
 			sb.isize = getInodesBlock();
@@ -54,12 +63,12 @@ try{
 			sb.ninode = getNumOfInodes();
 			sb.nfree = 100;
 			for(int i=0;i<100;i++){
-				sb.free[i] = (getFreeBlocksIndex() + i)*BLOCK_SIZE;
+				sb.free[i] = (getFreeBlocksIndex() + i);
 			}
 			file.write((char *)&sb,BLOCK_SIZE);
 
 			//Setting up root node
-			rootNode.flags = (rootNode.flags | 0xC0);
+			rootNode.flags = 0x1800;
 			rootNode.addr[0] = (1+ getInodesBlock())*BLOCK_SIZE;
 			file.write((char *)&rootNode,getSizeOfInode());
 
@@ -75,6 +84,10 @@ try{
 			}
 
 			//Writing Root Directory
+			MetaDirectory::Instance()->setNumInodes(getNumOfInodes());
+			MetaDirectory::Instance()->setPath(getFileSystemPath().append("fsaccess"));
+			MetaDirectory::Instance()->dirState();
+
 			//Setting './' character
 			rootDirectory.inodeNumber=1;
 			strcpy(rootDirectory.fileName,".");
@@ -86,9 +99,8 @@ try{
 			file.write((char *)&rootDirectory,sizeof(rootDirectory));
 
 			//Setting the remaining directory entries
-			rootDirectory = {};
 			for(int j=3; j<=numDirectoryEntry; j++){
-				file.write((char *)&rootDirectory,sizeof(rootDirectory));
+				file.write((char *)&filler,sizeof(filler));
 			}
 
 			//Empty Char buffer
@@ -106,7 +118,7 @@ try{
 				//To assign the head chain value link to the next free list . two condition are checked here
 				//Wether the cursor position is traversed 100 blocks starting from the index and
 				//Making sure the head chain don't point to blocks > than our free data blocks
-					if((i % 100 == getFreeBlocksIndex()) && ((getFreeBlocks() - i) >= 100)){
+					if((i % 100 == getFreeBlocksIndex()) && ((getFreeBlocks() - i) >= 100) ){
 							freeHeadChain = i+100;
 							file.write((char *)&freeHeadChain,2);
 							headChainBuffer = new char[BLOCK_SIZE - 2];
@@ -116,17 +128,19 @@ try{
 					}
 				}
 			}
+			cout <<"!!File System Created Successfully!!" <<endl;
+		}else{
+			cout << "!!Invalid file system path!!" <<endl;
 		}
 	 file.close();
 	 }else{
 		return;
 	 }
-
 	}catch(exception& e){
 		cout <<"Exception at createFileSystem method" <<endl;
 	}
-
 }
+
 /**
  * Caluculates the size of empty spaces that needs to be added to inode block, if there are any
  * hanging inodes they will be padded with spaces to nearest block size
@@ -252,10 +266,8 @@ void InitializeFS :: readBlocks(){
 	infile.open("fsaccess",ios::binary);
 	if(infile.is_open()){
 		infile.seekg(BLOCK_SIZE);
-		for(int l=1;l<=300;l++){
 		infile.read((char *)&node,getSizeOfInode());
-		cout <<"Flag value = " <<node.flags <<endl;
+		for(int k=0;k<8;k++) cout <<"addr = " << node.addr[k] <<endl;
 		}
-	}
 	infile.close();
 }
