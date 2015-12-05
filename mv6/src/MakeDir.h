@@ -16,11 +16,9 @@ public:
 	void setDirectoryName(string);
 	string getDirectoryName(void);
 	bool searchDirectoryEntries(void);
-	bool allocateFreeDirectoryEntry(void);
-	int getNextFreeInode(int);
-	int getNextFreeBlock(void);
-	void createDirectory(int argc, char *argv[]);
-	bool checkParameters(int argc, char *argv[]);
+	void allocateFreeDirectoryEntry(void);
+	void createDirectory(string,string);
+	bool checkParameters(string);
 };
 
 #endif /* MAKEDIR_H_ */
