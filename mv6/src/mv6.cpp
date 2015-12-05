@@ -1,58 +1,72 @@
 //============================================================================
 // Name        : mv6.cpp
 // Author      : Sriee
-// Version     :
-// Copyright   : Your copyright notice
-// Description : Hello World in C++, Ansi-style
+// Description : Entry function of the project. Based on user commands each
+//				 commands operation is executed in the separate class
 //============================================================================
 
-#include <iostream>
+#include <fstream>
 #include <string>
 #include "MakeDir.h"
+#include "Cpin.h"
+#include "Cpout.h"
+#include "MetaDirectory.h"
 
 using namespace std;
 
+/**
+ *Checks and validates the commands - initfs, cpin, cpout, mkdir and q
+ */
 class Entry{
-	string command;
-	int commandType=0;
+	string command,path;
+	int commandType,inodes,blocks;
+	fstream file;
 public:
-	Entry(string command){
-			this->command = command;
-	}
-	bool isValidCommand(string command);
-	void printCommand(void);
+	bool isValidCommand(string);
 	void setCommandType(int value);
 	int getCommandType();
-
 };
 
-void Entry::printCommand(){
-	cout <<"The Entered command is = " <<this->command <<endl;
-}
-
+/**
+ * Setter method to set the command type
+ *
+ * @param value: integer value corresponding to the command
+ */
 void Entry::setCommandType(int value){
 	this->commandType = value;
 }
 
+/*
+ * Getter method to get the integer value for the command
+ *
+ * @return CommandType value
+ */
 int Entry::getCommandType(){
 	return this->commandType;
 }
 
-bool Entry::isValidCommand(string command){
+/**
+ * Checks whether the command is a valid entry
+ *
+ * @param inp: string input from the terminal
+ */
+bool Entry::isValidCommand(string inp){
 	bool valid = false;
-	if (INITFS.compare(command)==0){
+	this->command = inp.substr(0,inp.find(" "));
+
+	if (INITFS.compare(this->command)==0){
 		valid = true;
 		this->setCommandType(static_cast<int>(initfs));
-	}else if (CP_IN.compare(command)==0){
+	}else if (CP_IN.compare(this->command)==0){
 		valid = true;
 		this->setCommandType(static_cast<int>(cpin));
-	}else if (CP_OUT.compare(command)==0){
+	}else if (CP_OUT.compare(this->command)==0){
 		valid = true;
 		this->setCommandType(static_cast<int>(cpout));
-	}else if (MK_DIR.compare(command)==0){
+	}else if (MK_DIR.compare(this->command)==0){
 		valid = true;
 		this->setCommandType(static_cast<int>(mkdir));
-	}else if (Q.compare(command)==0){
+	}else if (Q.compare(this->command)==0){
 		valid = true;
 		this->setCommandType(static_cast<int>(q));
 	}else{
@@ -61,31 +75,53 @@ bool Entry::isValidCommand(string command){
 	return valid;
 }
 
-
+/**
+ * Gets inputs from the user via the terminal. Validates the command
+ * Each command functionality is handled in separate files. Command
+ * keeps executing until 'q' character is pressed.
+ *
+ */
 int main(int argc,char *args[]) {
+	string input,cmd,path;
+	bool quit = false;
 
-	string firstArgument=args[1];
-	//Creating class instances
-	Entry entry(firstArgument);
+	Entry entry;		//Creating class instances
 	InitializeFS fs;
+	Cpin in;
 	MakeDir mkd;
-	if(entry.isValidCommand(firstArgument)){
-		cout<<"!!Entered Valid Command!!" <<endl;
-	}else{
-		cout<<"!!Entered Invalid Command!!\nTry Again...." <<endl;
-		exit(0);
-	}
-	switch(entry.getCommandType()){
-		case initfs: fs.createFileSystem(argc,args);
-					 cout <<"!!!Created File System Successfully!!!";
-					 fs.readBlocks();
-					 break;
-		case cpin:  entry.printCommand(); break;
-		case cpout: entry.printCommand(); break;
-		case mkdir: mkd.createDirectory(argc,args);
-					break;
-		default: cout<<"!!Entered Invalid Command!!\nTry Again...." <<endl; break;
-	}
+	Cpout out;
 
+	cout <<"***V6 File System***" <<endl;
+	cout <<"Press 'q' to quit" <<endl;
+
+	while(!quit){
+		getline(cin,input);
+
+		if(entry.isValidCommand(input)) {
+			switch(entry.getCommandType()){
+
+				case initfs: fs.createFileSystem(input);
+							 path = "";
+							 path = (fs.getFileSystemPath()).append("fsaccess");
+							 quit=false;
+							 break;
+				case cpin:   in.copyFile(input,path);
+							 quit = false;
+							 break;
+				case cpout:  out.copyOutFile(input,path);
+							 quit = false;
+							 break;
+				case mkdir:  mkd.createDirectory(input,path);
+							 quit = false;
+							 break;
+				case q:
+							 cout <<"!!!Quitting File system!!!" <<endl;
+							 quit = true;
+							 break;
+				default: break;
+			}
+		}
+		else cout<<"!!Entered Invalid Command!!\tTry Again...." <<endl;
+	}
 	return 0;
 }
